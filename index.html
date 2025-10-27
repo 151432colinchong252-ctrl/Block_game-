@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Block Fight | by J1WI Joel</title>
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(circle at center, #050518, #000);
+      overflow: hidden;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #222;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 16px;
+      text-shadow: 0 0 5px black;
+    }
+    #startScreen, #shopScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+    }
+    button {
+      margin-top: 10px;
+      font-size: 18px;
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #444;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h1>🟨 Block Fight 🟩</h1>
+    <p>by J1WI Joel</p>
+    <p>🕹️ 按 Enter 開始遊戲</p>
+    <p>移動：W A S D ｜ 打開商店：E</p>
+  </div>
+
+  <div id="shopScreen" style="display:none;">
+    <h2>🏪 商店</h2>
+    <p>金錢: <span id="money">0</span></p>
+    <button onclick="buyHP()">💖 增加血量 ($20)</button>
+    <button onclick="buySpeed()">⚡ 增加速度 ($30)</button>
+    <button onclick="closeShop()">返回遊戲 (E)</button>
+  </div>
+
+  <div id="info">HP: 100 | 💰: 0 | 🏆 Score: 0 | ⬆️ Lv.1</div>
+  <canvas id="game" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const info = document.getElementById('info');
+    const startScreen = document.getElementById('startScreen');
+    const shopScreen = document.getElementById('shopScreen');
+    const moneyText = document.getElementById('money');
+
+    let player = {x: 400, y: 300, size: 20, color: 'yellow', hp: 100, speed: 4};
+    let bullets = [];
+    let enemies = [];
+    let score = 0;
+    let money = 0;
+    let level = 1;
+    let gameStarted = false;
+    let inShop = false;
+
+    function spawnEnemy() {
+      let x = Math.random() * canvas.width;
+      let y = Math.random() * canvas.height;
+      enemies.push({x, y, size: 20, color: 'lime', hp: 20, speed: 1 + Math.random() * 1.5});
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+    }
+
+    function drawEnemies() {
+      enemies.forEach(e => {
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x, e.y, e.size, e.size);
+      });
+    }
+
+    function moveEnemies() {
+      enemies.forEach(e => {
+        let dx = player.x - e.x;
+        let dy = player.y - e.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        e.x += (dx/dist) * e.speed;
+        e.y += (dy/dist) * e.speed;
+      });
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPlayer();
+      drawEnemies();
+      moveEnemies();
+
+      enemies.forEach((e, i) => {
+        if (Math.abs(e.x - player.x) < player.size && Math.abs(e.y - player.y) < player.size) {
+          player.hp -= 1;
+          if (player.hp <= 0) {
+            gameOver();
+          }
+        }
+      });
+
+      info.innerHTML = `HP: ${player.hp} | 💰: ${money} | 🏆 Score: ${score} | ⬆️ Lv.${level}`;
+
+      if (Math.random() < 0.02 * level) spawnEnemy();
+
+      requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+      alert(`💀 你死了！總分：${score}`);
+      location.reload();
+    }
+
+    function buyHP() {
+      if (money >= 20) {
+        player.hp += 20;
+        money -= 20;
+        moneyText.textContent = money;
+      }
+    }
+
+    function buySpeed() {
+      if (money >= 30) {
+        player.speed += 0.5;
+        money -= 30;
+        moneyText.textContent = money;
+      }
+    }
+
+    function closeShop() {
+      shopScreen.style.display = 'none';
+      inShop = false;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (!gameStarted && e.key === 'Enter') {
+        gameStarted = true;
+        startScreen.style.display = 'none';
+        update();
+      }
+      if (inShop && e.key.toLowerCase() === 'e') closeShop();
+      if (!gameStarted || inShop) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'w': if (player.y > 0) player.y -= player.speed; break;
+        case 's': if (player.y + player.size < canvas.height) player.y += player.speed; break;
+        case 'a': if (player.x > 0) player.x -= player.speed; break;
+        case 'd': if (player.x + player.size < canvas.width) player.x += player.speed; break;
+        case 'e': shopScreen.style.display = 'flex'; moneyText.textContent = money; inShop = true; break;
+      }
+    });
+  </script>
+</body>
+</html>
